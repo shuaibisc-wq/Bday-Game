@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Prova's 18th Birthday Dare 🥂</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@700&family=Pacifico&display=swap');
+        * { touch-action: none; user-select: none; box-sizing: border-box; }
+        body { margin: 0; padding: 0; overflow: hidden; background: #0f172a; font-family: 'Montserrat', sans-serif; height: 100vh; color: white; }
+        
+        #game-canvas { display: block; background: radial-gradient(circle, #1e1b4b 0%, #020617 100%); width: 100%; height: 60%; border-bottom: 4px solid #f43f5e; }
+
+        /* Reward Card Popup */
+        #card-overlay { 
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%; 
+            background: rgba(0,0,0,0.9); display: none; flex-direction: column; 
+            justify-content: center; align-items: center; z-index: 200; 
+        }
+        .card { 
+            background: linear-gradient(135deg, #f43f5e 0%, #fb7185 100%);
+            padding: 30px; border-radius: 20px; width: 80%; text-align: center;
+            box-shadow: 0 0 30px rgba(244, 63, 94, 0.6); transform: scale(0.5); transition: 0.3s;
+        }
+        .card.active { transform: scale(1); }
+        .card h2 { font-family: 'Pacifico', cursive; font-size: 2rem; margin: 0; }
+        .card p { font-size: 1.2rem; margin: 20px 0; line-height: 1.5; font-weight: 400; }
+
+        /* Controls */
+        #controls { height: 40%; display: grid; grid-template-areas: ". up ." "left . right" ". down ."; justify-content: center; align-content: center; gap: 15px; background: #020617; }
+        .btn { width: 70px; height: 70px; background: #1e293b; border: 2px solid #f43f5e; border-radius: 50%; display: flex; justify-content: center; align-items: center; font-size: 24px; color: #fb7185; box-shadow: 0 0 15px rgba(244, 63, 94, 0.2); }
+        .btn:active { background: #f43f5e; color: white; }
+
+        button#close-card { background: white; color: #f43f5e; border: none; padding: 10px 25px; border-radius: 50px; font-weight: bold; cursor: pointer; margin-top: 10px; }
+    </style>
+</head>
+<body>
+
+<canvas id="game-canvas"></canvas>
+
+<div id="card-overlay">
+    <div class="card" id="reward-card">
+        <h2>Birthday Dare! 😈</h2>
+        <p id="dare-text">Loading your fate...</p>
+        <button id="close-card" onclick="closeCard()">I Accept ❤️</button>
+    </div>
+</div>
+
+<div id="controls">
+    <div class="btn" style="grid-area: up" onpointerdown="move(0,-1)">▲</div>
+    <div class="btn" style="grid-area: left" onpointerdown="move(-1,0)">◀</div>
+    <div class="btn" style="grid-area: right" onpointerdown="move(1,0)">▶</div>
+    <div class="btn" style="grid-area: down" onpointerdown="move(0,1)">▼</div>
+</div>
+
+<script>
+    const canvas = document.getElementById('game-canvas');
+    const ctx = canvas.getContext('2d');
+    
+    const provaImg = new Image(); provaImg.src = '1000017694-removebg-preview.png'; 
+    const shuaibImg = new Image(); shuaibImg.src = 'a97cf831-5384-4688-ac64-a6430ba0cc45-1_all_7690-removebg-preview.png';
+
+    let charSize = 80;
+    let prova = { x: 50, y: 50, vx: 0, vy: 0, speed: 5 };
+    let shuaib = { x: 200, y: 150, vx: 3, vy: 3 };
+
+    const dares = [
+        "Coupon: 1 Hot Date Night of your choice! 🥂",
+        "Dare: Tell Shuaib your deepest secret! 🤫",
+        "Coupon: 18 minutes of non-stop cuddles! 🤗",
+        "Dare: Send a 'Spicy' voice note to Shuaib right now! 🌶️",
+        "Coupon: Shuaib has to treat you to your favorite Chocolate! 🍫",
+        "Dare: Post a cute pic of us on your story! ✨",
+        "Coupon: One 'Yes Day' (Shuaib must say yes to everything!) 👑"
+    ];
+
+    function resize() {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight * 0.6;
+    }
+    window.addEventListener('resize', resize);
+    resize();
+
+    function move(x, y) {
+        prova.vx = x * prova.speed;
+        prova.vy = y * prova.speed;
+    }
+
+    function showCard() {
+        const overlay = document.getElementById('card-overlay');
+        const text = document.getElementById('dare-text');
+        const card = document.getElementById('reward-card');
+        
+        text.innerText = dares[Math.floor(Math.random() * dares.length)];
+        overlay.style.display = 'flex';
+        setTimeout(() => card.classList.add('active'), 50);
+        prova.vx = 0; prova.vy = 0; // Stop movement
+    }
+
+    function closeCard() {
+        const overlay = document.getElementById('card-overlay');
+        const card = document.getElementById('reward-card');
+        card.classList.remove('active');
+        setTimeout(() => overlay.style.display = 'none', 300);
+        
+        // Reposition Shuaib
+        shuaib.x = Math.random() * (canvas.width - charSize);
+        shuaib.y = Math.random() * (canvas.height - charSize);
+    }
+
+    function drawChar(img, x, y, color) {
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(x + charSize/2, y + charSize/2, charSize/2, 0, Math.PI*2);
+        ctx.clip();
+        if(img.complete) ctx.drawImage(img, x, y, charSize, charSize);
+        ctx.restore();
+        ctx.strokeStyle = color; ctx.lineWidth = 4;
+        ctx.beginPath(); ctx.arc(x + charSize/2, y + charSize/2, charSize/2, 0, Math.PI*2); ctx.stroke();
+    }
+
+    function gameLoop() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        // Move Prova
+        prova.x += prova.vx; prova.y += prova.vy;
+        if(prova.x < 0) prova.x = 0; if(prova.x > canvas.width - charSize) prova.x = canvas.width - charSize;
+        if(prova.y < 0) prova.y = 0; if(prova.y > canvas.height - charSize) prova.y = canvas.height - charSize;
+
+        // Move Shuaib
+        shuaib.x += shuaib.vx; shuaib.y += shuaib.vy;
+        if(shuaib.x < 0 || shuaib.x > canvas.width - charSize) shuaib.vx *= -1;
+        if(shuaib.y < 0 || shuaib.y > canvas.height - charSize) shuaib.vy *= -1;
+
+        // Catch Logic
+        if(Math.hypot(prova.x - shuaib.x, prova.y - shuaib.y) < 50 && document.getElementById('card-overlay').style.display !== 'flex') {
+            showCard();
+        }
+
+        drawChar(shuaibImg, shuaib.x, shuaib.y, "#60a5fa");
+        drawChar(provaImg, prova.x, prova.y, "#f43f5e");
+
+        requestAnimationFrame(gameLoop);
+    }
+
+    gameLoop();
+</script>
+</body>
+</html>
