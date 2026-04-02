@@ -3,41 +3,27 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Prova Run: 18th Birthday Dash 🏃‍♀️</title>
+    <title>Prova Run 18 ✨</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Pacifico&display=swap');
         * { touch-action: none; user-select: none; box-sizing: border-box; }
-        body { margin: 0; padding: 0; overflow: hidden; background: #1e1b4b; font-family: sans-serif; height: 100vh; }
-        
-        #game-container { position: relative; width: 100vw; height: 100vh; background: linear-gradient(to bottom, #312e81, #1e1b4b); overflow: hidden; }
+        body { margin: 0; padding: 0; overflow: hidden; background: #0f172a; font-family: sans-serif; }
+        #game-container { position: relative; width: 100vw; height: 100vh; background: linear-gradient(to bottom, #1e1b4b, #020617); }
         canvas { display: block; width: 100%; height: 100%; }
-
-        #ui { 
-            position: absolute; top: 20px; width: 100%; display: flex; 
-            justify-content: space-around; color: #f472b6; font-weight: bold; 
-            z-index: 10; font-size: 1.5rem; pointer-events: none; text-shadow: 0 0 10px rgba(244, 114, 182, 0.5);
-        }
-
-        #overlay { 
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%; 
-            background: rgba(15, 23, 42, 0.9); display: flex; flex-direction: column; 
-            justify-content: center; align-items: center; z-index: 100; text-align: center; color: white;
-        }
-        button { padding: 15px 50px; background: #f43f5e; color: white; border: none; border-radius: 50px; font-size: 1.3rem; font-weight: bold; box-shadow: 0 0 20px rgba(244, 63, 94, 0.6); }
+        #ui { position: absolute; top: 20px; width: 100%; text-align: center; color: #fb7185; font-size: 1.8rem; font-family: 'Pacifico', cursive; z-index: 10; pointer-events: none; }
+        #overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 100; color: white; }
+        button { padding: 15px 50px; background: #f43f5e; color: white; border: none; border-radius: 50px; font-size: 1.2rem; font-weight: bold; cursor: pointer; }
     </style>
 </head>
 <body>
 
     <div id="game-container">
-        <div id="ui">
-            <span>Score: <span id="score">0</span></span>
-        </div>
+        <div id="ui">Score: <span id="score">0</span></div>
         <canvas id="gameCanvas"></canvas>
-        
         <div id="overlay">
-            <h1 style="font-family: 'Pacifico'; color: #f43f5e; font-size: 3rem;">Prova Run</h1>
-            <p style="color: #94a3b8; margin-bottom: 30px;">Swipe Left/Right to Catch Shuaib!</p>
-            <button onclick="startGame()">Start Dash ✨</button>
+            <h1 style="font-family: 'Pacifico'; color: #f43f5e;">Prova's Dash</h1>
+            <p>Swipe Left/Right to change lanes!</p>
+            <button onclick="startGame()">Start Run 🏃‍♀️</button>
         </div>
     </div>
 
@@ -45,124 +31,107 @@
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d');
 
-    const provaImg = new Image(); provaImg.src = '1000017694-removebg-preview.png'; 
-    const shuaibImg = new Image(); shuaibImg.src = 'a97cf831-5384-4688-ac64-a6430ba0cc45-1_all_7690-removebg-preview.png';
-    const kittyImg = new Image(); kittyImg.src = 'kitty.jpg';
-    const iceCreamImg = new Image(); iceCreamImg.src = 'discone.jpg';
+    // IMAGE LOADING - Double check these filenames on your GitHub!
+    const imgP = new Image(); imgP.src = '1000017694-removebg-preview.png'; 
+    const imgS = new Image(); imgS.src = 'a97cf831-5384-4688-ac64-a6430ba0cc45-1_all_7690-removebg-preview.png';
+    const imgK = new Image(); imgK.src = 'kitty.jpg';
 
-    let gameActive = false, score = 0, gameSpeed = 5, twinkle = 0;
-    const charSize = 70;
-    let currentLane = 1; // 0: Left, 1: Middle, 2: Right
-    let laneWidth;
-    
-    let items = []; // Obstacles and Shuaib
+    let gameActive = false, score = 0, speed = 6, lane = 1;
+    const charSize = 65;
+    let items = [];
 
-    // SWIPE CONTROLS
-    let sX;
-    window.addEventListener('touchstart', e => sX = e.touches[0].clientX);
+    // Swipe Detection
+    let touchX;
+    window.addEventListener('touchstart', e => touchX = e.touches[0].clientX);
     window.addEventListener('touchend', e => {
         if(!gameActive) return;
-        const dX = e.changedTouches[0].clientX - sX;
-        if (Math.abs(dX) > 30) {
-            if (dX > 0 && currentLane < 2) currentLane++;
-            else if (dX < 0 && currentLane > 0) currentLane--;
+        const diff = e.changedTouches[0].clientX - touchX;
+        if(Math.abs(diff) > 30) {
+            if(diff > 0 && lane < 2) lane++;
+            else if(diff < 0 && lane > 0) lane--;
         }
     });
 
     function resize() {
         canvas.width = window.innerWidth;
         canvas.height = window.innerHeight;
-        laneWidth = canvas.width / 3;
     }
     window.addEventListener('resize', resize);
+
+    function spawn() {
+        if(!gameActive) return;
+        const isShuaib = Math.random() > 0.7;
+        items.push({ lane: Math.floor(Math.random()*3), y: -100, type: isShuaib ? 'S' : 'K' });
+        setTimeout(spawn, Math.max(500, 1200 - (score * 5)));
+    }
 
     function startGame() {
         resize();
         document.getElementById('overlay').style.display = 'none';
-        gameActive = true; score = 0; gameSpeed = 6; items = []; currentLane = 1;
-        spawnItem();
-        requestAnimationFrame(gameLoop);
+        gameActive = true; score = 0; speed = 6; lane = 1; items = [];
+        spawn();
+        requestAnimationFrame(update);
     }
 
-    function spawnItem() {
-        if(!gameActive) return;
-        const lane = Math.floor(Math.random() * 3);
-        const isShuaib = Math.random() > 0.75;
-        items.push({
-            lane: lane,
-            y: -100,
-            type: isShuaib ? 'shuaib' : 'wall',
-            color: isShuaib ? '#60a5fa' : '#f43f5e'
-        });
-        setTimeout(spawnItem, Math.max(600, 1500 - (score * 2)));
-    }
-
-    function drawCircle(img, x, y, border) {
+    function drawChar(img, x, y, color, label) {
         ctx.save();
-        ctx.beginPath(); ctx.arc(x + charSize/2, y + charSize/2, charSize/2, 0, Math.PI*2); ctx.clip();
-        if(img.complete) ctx.drawImage(img, x, y, charSize, charSize);
+        ctx.beginPath();
+        ctx.arc(x + charSize/2, y + charSize/2, charSize/2, 0, Math.PI*2);
+        ctx.clip();
+        
+        // If image fails, draw a colored circle with a letter
+        if (img.complete && img.naturalWidth !== 0) {
+            ctx.drawImage(img, x, y, charSize, charSize);
+        } else {
+            ctx.fillStyle = color;
+            ctx.fill();
+            ctx.fillStyle = "white";
+            ctx.font = "bold 30px Arial";
+            ctx.textAlign = "center";
+            ctx.fillText(label, x + charSize/2, y + charSize/1.5);
+        }
+        
         ctx.restore();
-        ctx.strokeStyle = border; ctx.lineWidth = 4;
+        ctx.strokeStyle = "white"; ctx.lineWidth = 3;
         ctx.beginPath(); ctx.arc(x + charSize/2, y + charSize/2, charSize/2, 0, Math.PI*2); ctx.stroke();
     }
 
-    function gameLoop() {
+    function update() {
         if(!gameActive) return;
         ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-        // Draw Lanes (Road)
+        // Draw Lanes
         ctx.strokeStyle = "rgba(255,255,255,0.1)";
-        ctx.setLineDash([20, 20]);
-        for(let i = 1; i < 3; i++) {
-            ctx.beginPath(); ctx.moveTo(i * laneWidth, 0); ctx.lineTo(i * laneWidth, canvas.height); ctx.stroke();
+        for(let i=1; i<3; i++) {
+            ctx.beginPath(); ctx.moveTo(i * (canvas.width/3), 0); ctx.lineTo(i * (canvas.width/3), canvas.height); ctx.stroke();
         }
-        ctx.setLineDash([]);
 
-        // Update & Draw Items
-        items.forEach((item, index) => {
-            item.y += gameSpeed;
-            const itemX = item.lane * laneWidth + (laneWidth/2 - charSize/2);
-            
-            if (item.type === 'shuaib') {
-                drawCircle(shuaibImg, itemX, item.y, "#60a5fa");
-            } else {
-                // Draw Wall/Obstacle
-                ctx.fillStyle = "#f43f5e";
-                ctx.beginPath(); ctx.roundRect(itemX, item.y, charSize, charSize, 10); ctx.fill();
-                drawCircle(kittyImg, itemX, item.y, "red");
-            }
+        const lW = canvas.width / 3;
+        const pX = lane * lW + (lW/2 - charSize/2);
+        const pY = canvas.height - 150;
 
-            // Collision Check
-            const provaX = currentLane * laneWidth + (laneWidth/2 - charSize/2);
-            const provaY = canvas.height - 150;
+        items.forEach((it, i) => {
+            it.y += speed;
+            const itX = it.lane * lW + (lW/2 - charSize/2);
 
-            if (item.y + charSize > provaY && item.y < provaY + charSize && item.lane === currentLane) {
-                if (item.type === 'shuaib') {
-                    score += 10;
-                    document.getElementById('score').innerText = score;
-                    twinkle = 20;
-                    items.splice(index, 1);
-                    gameSpeed += 0.1; // Get faster
+            if(it.type === 'S') drawChar(imgS, itX, it.y, "#3b82f6", "S");
+            else drawChar(imgK, itX, it.y, "#ef4444", "K");
+
+            // Collision
+            if(it.y + charSize > pY && it.y < pY + charSize && it.lane === lane) {
+                if(it.type === 'S') {
+                    score += 10; document.getElementById('score').innerText = score;
+                    items.splice(i, 1);
+                    speed += 0.2;
                 } else {
-                    gameActive = false;
-                    location.reload(); // Hit wall = Game Over
+                    gameActive = false; location.reload();
                 }
             }
-
-            if (item.y > canvas.height) items.splice(index, 1);
+            if(it.y > canvas.height) items.splice(i, 1);
         });
 
-        // Draw Prova
-        const provaX = currentLane * laneWidth + (laneWidth/2 - charSize/2);
-        drawCircle(provaImg, provaX, canvas.height - 150, "#f472b6");
-
-        // Ice Cream Twinkle
-        if (twinkle > 0) {
-            ctx.drawImage(iceCreamImg, canvas.width/2 - 50, 100, 100, 100);
-            twinkle--;
-        }
-
-        requestAnimationFrame(gameLoop);
+        drawChar(imgP, pX, pY, "#ec4899", "P");
+        requestAnimationFrame(update);
     }
 </script>
 </body>
