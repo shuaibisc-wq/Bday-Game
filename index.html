@@ -3,147 +3,167 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Prova's 18th Birthday Dare 🥂</title>
+    <title>Prova Run: 18th Birthday Dash 🏃‍♀️</title>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@700&family=Pacifico&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Pacifico&display=swap');
         * { touch-action: none; user-select: none; box-sizing: border-box; }
-        body { margin: 0; padding: 0; overflow: hidden; background: #0f172a; font-family: 'Montserrat', sans-serif; height: 100vh; color: white; }
+        body { margin: 0; padding: 0; overflow: hidden; background: #1e1b4b; font-family: sans-serif; height: 100vh; }
         
-        #game-canvas { display: block; background: radial-gradient(circle, #1e1b4b 0%, #020617 100%); width: 100%; height: 60%; border-bottom: 4px solid #f43f5e; }
+        #game-container { position: relative; width: 100vw; height: 100vh; background: linear-gradient(to bottom, #312e81, #1e1b4b); overflow: hidden; }
+        canvas { display: block; width: 100%; height: 100%; }
 
-        /* Reward Card Popup */
-        #card-overlay { 
+        #ui { 
+            position: absolute; top: 20px; width: 100%; display: flex; 
+            justify-content: space-around; color: #f472b6; font-weight: bold; 
+            z-index: 10; font-size: 1.5rem; pointer-events: none; text-shadow: 0 0 10px rgba(244, 114, 182, 0.5);
+        }
+
+        #overlay { 
             position: absolute; top: 0; left: 0; width: 100%; height: 100%; 
-            background: rgba(0,0,0,0.9); display: none; flex-direction: column; 
-            justify-content: center; align-items: center; z-index: 200; 
+            background: rgba(15, 23, 42, 0.9); display: flex; flex-direction: column; 
+            justify-content: center; align-items: center; z-index: 100; text-align: center; color: white;
         }
-        .card { 
-            background: linear-gradient(135deg, #f43f5e 0%, #fb7185 100%);
-            padding: 30px; border-radius: 20px; width: 80%; text-align: center;
-            box-shadow: 0 0 30px rgba(244, 63, 94, 0.6); transform: scale(0.5); transition: 0.3s;
-        }
-        .card.active { transform: scale(1); }
-        .card h2 { font-family: 'Pacifico', cursive; font-size: 2rem; margin: 0; }
-        .card p { font-size: 1.2rem; margin: 20px 0; line-height: 1.5; font-weight: 400; }
-
-        /* Controls */
-        #controls { height: 40%; display: grid; grid-template-areas: ". up ." "left . right" ". down ."; justify-content: center; align-content: center; gap: 15px; background: #020617; }
-        .btn { width: 70px; height: 70px; background: #1e293b; border: 2px solid #f43f5e; border-radius: 50%; display: flex; justify-content: center; align-items: center; font-size: 24px; color: #fb7185; box-shadow: 0 0 15px rgba(244, 63, 94, 0.2); }
-        .btn:active { background: #f43f5e; color: white; }
-
-        button#close-card { background: white; color: #f43f5e; border: none; padding: 10px 25px; border-radius: 50px; font-weight: bold; cursor: pointer; margin-top: 10px; }
+        button { padding: 15px 50px; background: #f43f5e; color: white; border: none; border-radius: 50px; font-size: 1.3rem; font-weight: bold; box-shadow: 0 0 20px rgba(244, 63, 94, 0.6); }
     </style>
 </head>
 <body>
 
-<canvas id="game-canvas"></canvas>
-
-<div id="card-overlay">
-    <div class="card" id="reward-card">
-        <h2>Birthday Dare! 😈</h2>
-        <p id="dare-text">Loading your fate...</p>
-        <button id="close-card" onclick="closeCard()">I Accept ❤️</button>
+    <div id="game-container">
+        <div id="ui">
+            <span>Score: <span id="score">0</span></span>
+        </div>
+        <canvas id="gameCanvas"></canvas>
+        
+        <div id="overlay">
+            <h1 style="font-family: 'Pacifico'; color: #f43f5e; font-size: 3rem;">Prova Run</h1>
+            <p style="color: #94a3b8; margin-bottom: 30px;">Swipe Left/Right to Catch Shuaib!</p>
+            <button onclick="startGame()">Start Dash ✨</button>
+        </div>
     </div>
-</div>
-
-<div id="controls">
-    <div class="btn" style="grid-area: up" onpointerdown="move(0,-1)">▲</div>
-    <div class="btn" style="grid-area: left" onpointerdown="move(-1,0)">◀</div>
-    <div class="btn" style="grid-area: right" onpointerdown="move(1,0)">▶</div>
-    <div class="btn" style="grid-area: down" onpointerdown="move(0,1)">▼</div>
-</div>
 
 <script>
-    const canvas = document.getElementById('game-canvas');
+    const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d');
-    
+
     const provaImg = new Image(); provaImg.src = '1000017694-removebg-preview.png'; 
     const shuaibImg = new Image(); shuaibImg.src = 'a97cf831-5384-4688-ac64-a6430ba0cc45-1_all_7690-removebg-preview.png';
+    const kittyImg = new Image(); kittyImg.src = 'kitty.jpg';
+    const iceCreamImg = new Image(); iceCreamImg.src = 'discone.jpg';
 
-    let charSize = 80;
-    let prova = { x: 50, y: 50, vx: 0, vy: 0, speed: 5 };
-    let shuaib = { x: 200, y: 150, vx: 3, vy: 3 };
+    let gameActive = false, score = 0, gameSpeed = 5, twinkle = 0;
+    const charSize = 70;
+    let currentLane = 1; // 0: Left, 1: Middle, 2: Right
+    let laneWidth;
+    
+    let items = []; // Obstacles and Shuaib
 
-    const dares = [
-        "Coupon: 1 Hot Date Night of your choice! 🥂",
-        "Dare: Tell Shuaib your deepest secret! 🤫",
-        "Coupon: 18 minutes of non-stop cuddles! 🤗",
-        "Dare: Send a 'Spicy' voice note to Shuaib right now! 🌶️",
-        "Coupon: Shuaib has to treat you to your favorite Chocolate! 🍫",
-        "Dare: Post a cute pic of us on your story! ✨",
-        "Coupon: One 'Yes Day' (Shuaib must say yes to everything!) 👑"
-    ];
+    // SWIPE CONTROLS
+    let sX;
+    window.addEventListener('touchstart', e => sX = e.touches[0].clientX);
+    window.addEventListener('touchend', e => {
+        if(!gameActive) return;
+        const dX = e.changedTouches[0].clientX - sX;
+        if (Math.abs(dX) > 30) {
+            if (dX > 0 && currentLane < 2) currentLane++;
+            else if (dX < 0 && currentLane > 0) currentLane--;
+        }
+    });
 
     function resize() {
         canvas.width = window.innerWidth;
-        canvas.height = window.innerHeight * 0.6;
+        canvas.height = window.innerHeight;
+        laneWidth = canvas.width / 3;
     }
     window.addEventListener('resize', resize);
-    resize();
 
-    function move(x, y) {
-        prova.vx = x * prova.speed;
-        prova.vy = y * prova.speed;
+    function startGame() {
+        resize();
+        document.getElementById('overlay').style.display = 'none';
+        gameActive = true; score = 0; gameSpeed = 6; items = []; currentLane = 1;
+        spawnItem();
+        requestAnimationFrame(gameLoop);
     }
 
-    function showCard() {
-        const overlay = document.getElementById('card-overlay');
-        const text = document.getElementById('dare-text');
-        const card = document.getElementById('reward-card');
-        
-        text.innerText = dares[Math.floor(Math.random() * dares.length)];
-        overlay.style.display = 'flex';
-        setTimeout(() => card.classList.add('active'), 50);
-        prova.vx = 0; prova.vy = 0; // Stop movement
+    function spawnItem() {
+        if(!gameActive) return;
+        const lane = Math.floor(Math.random() * 3);
+        const isShuaib = Math.random() > 0.75;
+        items.push({
+            lane: lane,
+            y: -100,
+            type: isShuaib ? 'shuaib' : 'wall',
+            color: isShuaib ? '#60a5fa' : '#f43f5e'
+        });
+        setTimeout(spawnItem, Math.max(600, 1500 - (score * 2)));
     }
 
-    function closeCard() {
-        const overlay = document.getElementById('card-overlay');
-        const card = document.getElementById('reward-card');
-        card.classList.remove('active');
-        setTimeout(() => overlay.style.display = 'none', 300);
-        
-        // Reposition Shuaib
-        shuaib.x = Math.random() * (canvas.width - charSize);
-        shuaib.y = Math.random() * (canvas.height - charSize);
-    }
-
-    function drawChar(img, x, y, color) {
+    function drawCircle(img, x, y, border) {
         ctx.save();
-        ctx.beginPath();
-        ctx.arc(x + charSize/2, y + charSize/2, charSize/2, 0, Math.PI*2);
-        ctx.clip();
+        ctx.beginPath(); ctx.arc(x + charSize/2, y + charSize/2, charSize/2, 0, Math.PI*2); ctx.clip();
         if(img.complete) ctx.drawImage(img, x, y, charSize, charSize);
         ctx.restore();
-        ctx.strokeStyle = color; ctx.lineWidth = 4;
+        ctx.strokeStyle = border; ctx.lineWidth = 4;
         ctx.beginPath(); ctx.arc(x + charSize/2, y + charSize/2, charSize/2, 0, Math.PI*2); ctx.stroke();
     }
 
     function gameLoop() {
+        if(!gameActive) return;
         ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-        // Move Prova
-        prova.x += prova.vx; prova.y += prova.vy;
-        if(prova.x < 0) prova.x = 0; if(prova.x > canvas.width - charSize) prova.x = canvas.width - charSize;
-        if(prova.y < 0) prova.y = 0; if(prova.y > canvas.height - charSize) prova.y = canvas.height - charSize;
-
-        // Move Shuaib
-        shuaib.x += shuaib.vx; shuaib.y += shuaib.vy;
-        if(shuaib.x < 0 || shuaib.x > canvas.width - charSize) shuaib.vx *= -1;
-        if(shuaib.y < 0 || shuaib.y > canvas.height - charSize) shuaib.vy *= -1;
-
-        // Catch Logic
-        if(Math.hypot(prova.x - shuaib.x, prova.y - shuaib.y) < 50 && document.getElementById('card-overlay').style.display !== 'flex') {
-            showCard();
+        // Draw Lanes (Road)
+        ctx.strokeStyle = "rgba(255,255,255,0.1)";
+        ctx.setLineDash([20, 20]);
+        for(let i = 1; i < 3; i++) {
+            ctx.beginPath(); ctx.moveTo(i * laneWidth, 0); ctx.lineTo(i * laneWidth, canvas.height); ctx.stroke();
         }
+        ctx.setLineDash([]);
 
-        drawChar(shuaibImg, shuaib.x, shuaib.y, "#60a5fa");
-        drawChar(provaImg, prova.x, prova.y, "#f43f5e");
+        // Update & Draw Items
+        items.forEach((item, index) => {
+            item.y += gameSpeed;
+            const itemX = item.lane * laneWidth + (laneWidth/2 - charSize/2);
+            
+            if (item.type === 'shuaib') {
+                drawCircle(shuaibImg, itemX, item.y, "#60a5fa");
+            } else {
+                // Draw Wall/Obstacle
+                ctx.fillStyle = "#f43f5e";
+                ctx.beginPath(); ctx.roundRect(itemX, item.y, charSize, charSize, 10); ctx.fill();
+                drawCircle(kittyImg, itemX, item.y, "red");
+            }
+
+            // Collision Check
+            const provaX = currentLane * laneWidth + (laneWidth/2 - charSize/2);
+            const provaY = canvas.height - 150;
+
+            if (item.y + charSize > provaY && item.y < provaY + charSize && item.lane === currentLane) {
+                if (item.type === 'shuaib') {
+                    score += 10;
+                    document.getElementById('score').innerText = score;
+                    twinkle = 20;
+                    items.splice(index, 1);
+                    gameSpeed += 0.1; // Get faster
+                } else {
+                    gameActive = false;
+                    location.reload(); // Hit wall = Game Over
+                }
+            }
+
+            if (item.y > canvas.height) items.splice(index, 1);
+        });
+
+        // Draw Prova
+        const provaX = currentLane * laneWidth + (laneWidth/2 - charSize/2);
+        drawCircle(provaImg, provaX, canvas.height - 150, "#f472b6");
+
+        // Ice Cream Twinkle
+        if (twinkle > 0) {
+            ctx.drawImage(iceCreamImg, canvas.width/2 - 50, 100, 100, 100);
+            twinkle--;
+        }
 
         requestAnimationFrame(gameLoop);
     }
-
-    gameLoop();
 </script>
 </body>
 </html>
